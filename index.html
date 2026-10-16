@@ -1,1 +1,1094 @@
-index.html
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estación Meteorológica Mollinedo - INTA</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  
+  <!-- Chart.js para gráficos interactivos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/feather-icons"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+
+  <script>
+    if (localStorage.theme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col justify-between transition-colors duration-300">
+
+  <!-- HEADER INSTITUCIONAL -->
+  <header class="bg-gradient-to-r from-[#0B7BAF] via-[#08618B] to-[#054869] text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+      
+      <div class="flex items-center space-x-4">
+        <img src="./logo_inta.png" onerror="this.onerror=null; this.src='../logo_inta.png';" alt="Logo INTA" class="h-14 bg-white p-1 rounded-lg shadow-md transition-transform hover:scale-105">
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight">Estación Meteorológica Automática</h1>
+          <p class="text-blue-200 text-xs font-medium">Mollinedo (iMetos 3.3 • ID: 00002586) - Salta</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:block text-right text-xs bg-black/20 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
+          <p class="font-semibold text-blue-100 flex items-center justify-end gap-1">
+            <i data-feather="map-pin" class="h-3.5 w-3.5 text-sky-300"></i> Red Agroclimática INTA Salta
+          </p>
+          <p class="text-blue-200 text-[11px] mt-0.5">Estación iMetos 3.3 • Transmisión Online</p>
+        </div>
+
+        <button id="theme-toggle" type="button" aria-label="Cambiar Tema" class="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-blue-100 border border-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-white/50">
+          <i id="theme-toggle-dark-icon" data-feather="moon" class="hidden h-5 w-5"></i>
+          <i id="theme-toggle-light-icon" data-feather="sun" class="hidden h-5 w-5 text-amber-300"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- NAVBAR DE REPORTES -->
+    <nav class="bg-black/20 backdrop-blur-md border-t border-white/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between overflow-x-auto py-2 text-xs font-medium gap-2 no-scrollbar whitespace-nowrap">
+          
+          <div class="flex items-center gap-2">
+            <a href="https://intasalta.github.io/emas/" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all shadow-sm">
+              <i data-feather="home" class="h-3.5 w-3.5"></i> Inicio
+            </a>
+
+            <a href="https://raw.githubusercontent.com/intasalta/imetos/main/00002586_station_data.xlsx" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-semibold transition-all shadow-sm" title="Descargar datos crudos de los últimos 2 días en formato Excel">
+              <i data-feather="download" class="h-3.5 w-3.5 text-emerald-300"></i> Datos 2 Días (XLSX)
+            </a>
+          </div>
+
+          <button id="info-modal-btn" type="button" class="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-blue-100 border border-white/20 text-xs font-semibold transition-all">
+            <i data-feather="info" class="h-3.5 w-3.5"></i>
+            <span>¿Quiénes Somos?</span>
+          </button>
+
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL / DASHBOARD -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+
+    <!-- FECHA Y CONTROL DE GRÁFICOS -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-4 md:p-6 border border-slate-200 dark:border-slate-700/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-colors">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">Última actualización de datos</span>
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2 mt-0.5">
+          <i data-feather="clock" class="text-sky-500 h-5 w-5"></i>
+          <span id="label-ultima-fecha">Cargando datos...</span>
+        </h2>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Selector de rango para gráficos online -->
+        <div class="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60 text-xs font-semibold gap-1">
+          <span class="text-[11px] text-slate-500 dark:text-slate-400 px-2 flex items-center gap-1">
+            <i data-feather="activity" class="h-3.5 w-3.5 text-sky-500"></i> Rango:
+          </span>
+          <button id="btn-rango-24h" onclick="cambiarRangoHoras(24)" class="px-2.5 py-1 rounded-lg bg-sky-500 text-white shadow-sm transition-all text-xs font-semibold">
+            24 hs
+          </button>
+          <button id="btn-rango-48h" onclick="cambiarRangoHoras(48)" class="px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800 transition-all text-xs font-semibold">
+            48 hs
+          </button>
+          <button onclick="cargarDatosEstacion()" title="Recargar datos y gráficos" class="p-1.5 rounded-lg text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 hover:bg-white/50 dark:hover:bg-slate-800 transition-all border-l border-slate-200 dark:border-slate-700/60 pl-2 ml-0.5">
+            <i id="icon-refresh-dash" data-feather="refresh-cw" class="h-3.5 w-3.5"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 1: TEMPERATURA, HUMEDAD Y PUNTO DE ROCÍO -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <!-- TARJETA: TEMPERATURA -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/60 overflow-hidden flex flex-col justify-between transition-colors">
+        <div class="p-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <i data-feather="thermometer" class="h-5 w-5 text-red-500"></i> Temperatura
+            </h3>
+            <span id="card-temp-actual" class="text-3xl font-extrabold text-slate-900 dark:text-white">--<span>°C</span></span>
+          </div>
+
+          <table class="w-full text-xs text-left text-slate-600 dark:text-slate-300">
+            <thead class="bg-slate-50 dark:bg-slate-900/50 text-slate-400 font-semibold uppercase">
+              <tr>
+                <th class="py-2 px-1">Período</th>
+                <th class="py-2 px-1 text-center">Mínima</th>
+                <th class="py-2 px-1 text-center">Máxima</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50">
+              <tr>
+                <td class="py-2 font-medium">Últimas 24 hs</td>
+                <td id="table-temp-min" class="py-2 text-center text-blue-600 dark:text-blue-400 font-semibold">--°C</td>
+                <td id="table-temp-max" class="py-2 text-center text-red-600 dark:text-red-400 font-semibold">--°C</td>
+              </tr>
+              <tr class="text-[10px] text-slate-400">
+                <td class="py-1">Hora reg:</td>
+                <td id="table-temp-min-time" class="py-1 text-center">--:--</td>
+                <td id="table-temp-max-time" class="py-1 text-center">--:--</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="bg-slate-50 dark:bg-slate-900/40 p-3 border-t border-slate-100 dark:border-slate-700/50">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <i data-feather="trending-up" class="h-3.5 w-3.5 text-red-500"></i> Evolución Térmica y Rocío (°C)
+            </span>
+            <span id="badge-temp-val" class="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 font-semibold font-mono">--</span>
+          </div>
+          <div class="h-44 w-full relative">
+            <canvas id="chartTemp"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- TARJETA: HUMEDAD -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/60 overflow-hidden flex flex-col justify-between transition-colors">
+        <div class="p-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <i data-feather="droplet" class="h-5 w-5 text-blue-500"></i> Humedad
+            </h3>
+            <span id="card-hum-actual" class="text-3xl font-extrabold text-slate-900 dark:text-white">--<span>%</span></span>
+          </div>
+
+          <table class="w-full text-xs text-left text-slate-600 dark:text-slate-300">
+            <thead class="bg-slate-50 dark:bg-slate-900/50 text-slate-400 font-semibold uppercase">
+              <tr>
+                <th class="py-2 px-1">Período</th>
+                <th class="py-2 px-1 text-center">Mínima</th>
+                <th class="py-2 px-1 text-center">Máxima</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50">
+              <tr>
+                <td class="py-2 font-medium">Últimas 24 hs</td>
+                <td id="table-hum-min" class="py-2 text-center text-blue-600 dark:text-blue-400 font-semibold">--%</td>
+                <td id="table-hum-max" class="py-2 text-center text-sky-600 dark:text-sky-400 font-semibold">--%</td>
+              </tr>
+              <tr class="text-[10px] text-slate-400">
+                <td class="py-1">Hora reg:</td>
+                <td id="table-hum-min-time" class="py-1 text-center">--:--</td>
+                <td id="table-hum-max-time" class="py-1 text-center">--:--</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="bg-slate-50 dark:bg-slate-900/40 p-3 border-t border-slate-100 dark:border-slate-700/50">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <i data-feather="droplet" class="h-3.5 w-3.5 text-blue-500"></i> Humedad Relativa (%)
+            </span>
+            <span id="badge-hum-val" class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold font-mono">--</span>
+          </div>
+          <div class="h-44 w-full relative">
+            <canvas id="chartHum"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- TARJETA: PUNTO DE ROCÍO -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/60 overflow-hidden flex flex-col justify-between transition-colors">
+        <div class="p-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <i data-feather="thermometer" class="h-5 w-5 text-cyan-500"></i> Punto de Rocío
+            </h3>
+            <span id="card-dew-val" class="text-3xl font-extrabold text-slate-900 dark:text-white">--<span>°C</span></span>
+          </div>
+
+          <table class="w-full text-xs text-left text-slate-600 dark:text-slate-300">
+            <thead class="bg-slate-50 dark:bg-slate-900/50 text-slate-400 font-semibold uppercase">
+              <tr>
+                <th class="py-2 px-1">Período</th>
+                <th class="py-2 px-1 text-center">Mínima</th>
+                <th class="py-2 px-1 text-center">Máxima</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700/50">
+              <tr>
+                <td class="py-2 font-medium">Últimas 24 hs</td>
+                <td id="table-dew-min" class="py-2 text-center text-cyan-600 dark:text-cyan-400 font-semibold">--°C</td>
+                <td id="table-dew-max" class="py-2 text-center text-teal-600 dark:text-teal-400 font-semibold">--°C</td>
+              </tr>
+              <tr class="text-[10px] text-slate-400">
+                <td class="py-1">Hora reg:</td>
+                <td id="table-dew-min-time" class="py-1 text-center">--:--</td>
+                <td id="table-dew-max-time" class="py-1 text-center">--:--</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="bg-slate-50 dark:bg-slate-900/40 p-3 border-t border-slate-100 dark:border-slate-700/50">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <i data-feather="trending-up" class="h-3.5 w-3.5 text-cyan-500"></i> Evolución Punto de Rocío (°C)
+            </span>
+            <span id="badge-dew-val" class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-semibold font-mono">--</span>
+          </div>
+          <div class="h-44 w-full relative">
+            <canvas id="chartDew"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SECCIÓN 2: LLUVIA Y RADIACIÓN SOLAR -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <!-- PRECIPITACIONES -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/60 p-5 flex flex-col justify-between transition-colors">
+        <div>
+          <h3 class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2 mb-4">
+            <i data-feather="cloud-rain" class="h-5 w-5 text-blue-600 dark:text-blue-400"></i> Precipitación & Lluvia
+          </h3>
+
+          <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+            <div class="bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 p-3 rounded-xl col-span-2 sm:col-span-1">
+              <p class="text-xs text-blue-600 dark:text-blue-400 font-medium">Acumulado 24 hs</p>
+              <p id="card-rain-24h" class="text-2xl font-bold text-blue-950 dark:text-blue-200">-- mm</p>
+            </div>
+
+            <div class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 col-span-2 sm:col-span-1">
+              <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Acumulado 48 hs</p>
+              <p id="card-rain-48h" class="text-2xl font-bold text-slate-800 dark:text-white">-- mm</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <i data-feather="cloud-drizzle" class="h-3.5 w-3.5 text-sky-500"></i> Precipitación Horaria (mm)
+            </span>
+            <span id="badge-rain-val" class="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 font-semibold font-mono">--</span>
+          </div>
+          <div class="h-44 w-full relative">
+            <canvas id="chartLluvia"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- RADIACIÓN SOLAR -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/60 p-5 flex flex-col justify-between transition-colors">
+        <div>
+          <h3 class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2 mb-4">
+            <i data-feather="sun" class="h-5 w-5 text-amber-500"></i> Radiación Solar
+          </h3>
+
+          <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+            <div class="bg-amber-50/70 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-100 dark:border-amber-900/40">
+              <p class="text-xs text-amber-700 dark:text-amber-400 font-medium">Radiación Actual</p>
+              <p id="card-solar-actual" class="text-xl font-bold text-amber-950 dark:text-amber-200">-- W/m²</p>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+              <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Máxima 24 hs</p>
+              <p id="card-solar-max" class="text-xl font-bold text-slate-800 dark:text-white">-- W/m²</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-700/50">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <i data-feather="sun" class="h-3.5 w-3.5 text-amber-500"></i> Evolución de Radiación Solar (W/m²)
+            </span>
+            <span id="badge-solar-val" class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold font-mono">--</span>
+          </div>
+          <div class="h-44 w-full relative">
+            <canvas id="chartSolar"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SECCIÓN 3: VIENTO (O DPV) -->
+    <div class="grid grid-cols-1 md:grid-cols-1 gap-6">
+      
+      <!-- TARJETA: DPV & DELTAT (Alternativa sin viento para Mollinedo) -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/60 p-5 flex flex-col justify-between transition-colors">
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <i data-feather="activity" class="h-5 w-5 text-indigo-500"></i> DPV & Delta T
+            </h3>
+            <span id="card-dpv-val" class="text-3xl font-extrabold text-slate-900 dark:text-white">-- <span class="text-xs text-slate-400 font-normal">kPa</span></span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs mb-4">
+            <div class="bg-indigo-50/70 dark:bg-indigo-950/30 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
+              <p class="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">Déficit Presión Vapor</p>
+              <p id="card-dpv-sub" class="text-lg font-bold text-indigo-950 dark:text-indigo-200">-- kPa</p>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Delta T (Pulverizaciones)</p>
+              <p id="card-deltat-val" class="text-lg font-bold text-slate-800 dark:text-white">-- °C</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 mt-2">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <i data-feather="trending-up" class="h-3.5 w-3.5 text-indigo-500"></i> Evolución DPV (kPa)
+            </span>
+            <span id="badge-dpv-val" class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold font-mono">--</span>
+          </div>
+          <div class="h-44 w-full relative">
+            <canvas id="chartDpv"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ADVERTENCIA DE SERVICIO -->
+    <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-2xl text-xs flex items-center gap-3">
+      <i data-feather="alert-circle" class="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0"></i>
+      <p>Los datos mostrados provienen de la estación meteorológica iMetos 3.3 (Mollinedo) conectada a la red de monitoreo agroclimático INTA Salta.</p>
+    </div>
+
+  </main>
+
+  <!-- MODAL ACERCA DE / QUIÉNES SOMOS  -->
+  <div id="info-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-700 relative max-h-[90vh] overflow-y-auto">
+      
+      <button id="close-modal-btn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg transition-colors">
+        <i data-feather="x" class="h-6 w-6"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <div class="p-3 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-xl">
+          <i data-feather="help-circle" class="h-6 w-6"></i>
+        </div>
+        <div>
+          <h3 class="text-xl font-bold text-slate-900 dark:text-white">¿Quiénes Somos?</h3>
+        </div>
+      </div>
+
+      <div class="space-y-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+        <div>
+          <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1">Origen de la Estación</h4>
+          <p>
+            La Estación Meteorológica Automática (EMA) Mollinedo es del modelo <b>iMetos 3.3</b> y opera dentro de la red de monitoreo agroclimático del INTA Salta para el registro y procesamiento continuo de variables agroclimáticas.
+          </p>
+        </div>
+
+        <hr class="border-slate-100 dark:border-slate-700/60">
+
+        <div>
+          <h4 class="font-semibold text-slate-800 dark:text-slate-100 mb-1">
+            Responsables, Operación y Gestión de la Red
+          </h4>
+          <p class="mb-2">
+            <b>Germán Guanca</b>, Observador Meteorológico de Superficie (desde 2004), está a cargo del mantenimiento técnico, diagnóstico, calibración y captura de datos de las estaciones automáticas de la zona.
+          </p>
+          <p class="mb-2">
+            El <b>Lic. Hernán Elena</b>, especialista en SIG, coordina la integración de datos, el procesamiento de series climáticas y su publicación en geoportales (GEOINTA e IDESA).
+          </p>
+          <p>
+            Por su parte, el <b>Ing. Gustavo Ramírez</b> colabora en la gestión y articulación para la expansión de la red mediante la incorporación de nuevas estaciones meteorológicas.
+          </p>
+        </div>
+
+        <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1">
+          <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">Contacto Institucional:</p>
+          <p class="text-xs">Estación Experimental Agropecuaria Salta - INTA</p>
+          <p class="text-xs text-sky-600 dark:text-sky-400">Ruta Nacional 68 Km 172, Cerrillos, Salta</p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button id="confirm-modal-btn" class="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-xl transition-all">
+          Entendido
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700/60 py-8 mt-6 transition-colors">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <div class="flex justify-center items-center">
+        <img src="./MECON-Agricultura-BLANCO.png" onerror="this.onerror=null; this.src='../MECON-Agricultura-BLANCO.png';" alt="Secretaría de Agricultura, Ganadería y Pesca" class="h-16 md:h-20 w-auto opacity-90 hover:opacity-100 transition">
+      </div>
+    </div>
+  </footer>
+
+  <!-- SCRIPTS Y CONTROLADORES -->
+  <script>
+    feather.replace();
+
+    // Lógica Modo Oscuro / Claro
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const darkIcon = document.getElementById('theme-toggle-dark-icon');
+    const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+    function syncThemeIcons() {
+      if (document.documentElement.classList.contains('dark')) {
+        lightIcon.classList.remove('hidden');
+        darkIcon.classList.add('hidden');
+      } else {
+        darkIcon.classList.remove('hidden');
+        lightIcon.classList.add('hidden');
+      }
+      feather.replace();
+    }
+    syncThemeIcons();
+
+    themeToggleBtn.addEventListener('click', function() {
+      if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      syncThemeIcons();
+      actualizarTemaGraficos();
+    });
+
+    // Modal ¿Quiénes Somos?
+    const infoModalBtn = document.getElementById('info-modal-btn');
+    const infoModal = document.getElementById('info-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const confirmModalBtn = document.getElementById('confirm-modal-btn');
+
+    infoModalBtn.addEventListener('click', () => infoModal.classList.remove('hidden'));
+    closeModalBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
+    confirmModalBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
+    infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.add('hidden'); });
+
+    // =========================================================================
+    // LECTURA DINÁMICA DEL CSV Y RENDERIZADO DE GRÁFICOS
+    // =========================================================================
+    const PRIMARY_CSV_URL = "https://raw.githubusercontent.com/intasalta/imetos/main/00002586_station_data.csv";
+    const FALLBACK_CSV_URL = "../00002586_station_data.csv";
+    const LOCAL_CSV_URL = "00002586_station_data.csv";
+
+    let datosEstacion = [];
+    let rangoHorasActual = 24;
+
+    let chartTemp = null;
+    let chartHum = null;
+    let chartDew = null;
+    let chartLluvia = null;
+    let chartSolar = null;
+    let chartViento = null;
+    let chartDpv = null;
+
+    function getChartColors() {
+      const isDark = document.documentElement.classList.contains('dark');
+      return {
+        isDark,
+        textColor: isDark ? '#94a3b8' : '#64748b',
+        gridColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.06)'
+      };
+    }
+
+    function actualizarTemaGraficos() {
+      const { textColor, gridColor } = getChartColors();
+      const graficos = [chartTemp, chartHum, chartDew, chartLluvia, chartSolar, chartViento, chartDpv];
+      graficos.forEach(ch => {
+        if (!ch) return;
+        if (ch.options.scales) {
+          if (ch.options.scales.x) {
+            ch.options.scales.x.ticks.color = textColor;
+            ch.options.scales.x.grid.color = gridColor;
+          }
+          if (ch.options.scales.y) {
+            ch.options.scales.y.ticks.color = textColor;
+            ch.options.scales.y.grid.color = gridColor;
+            if (ch.options.scales.y.title) ch.options.scales.y.title.color = textColor;
+          }
+        }
+        if (ch.options.plugins && ch.options.plugins.legend) {
+          ch.options.plugins.legend.labels.color = textColor;
+        }
+        ch.update();
+      });
+    }
+
+    // Parser CSV robusto
+    function parseCSVLine(line) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          result.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current);
+      return result;
+    }
+
+    function parseCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) return [];
+      const headers = parseCSVLine(lines[0]);
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const vals = parseCSVLine(lines[i]);
+        const row = {};
+        headers.forEach((h, idx) => {
+          row[h.trim()] = vals[idx] !== undefined ? vals[idx].trim() : '';
+        });
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    function getVal(row, term) {
+      const lowerTerm = term.toLowerCase();
+      for (const k in row) {
+        if (k.toLowerCase().includes(lowerTerm)) {
+          const num = parseFloat(row[k]);
+          return isNaN(num) ? null : num;
+        }
+      }
+      return null;
+    }
+
+    async function cargarDatosEstacion() {
+      const icon = document.getElementById('icon-refresh-dash');
+      if (icon) icon.classList.add('animate-spin');
+
+      try {
+        let response = null;
+        const urlsToTry = [
+          PRIMARY_CSV_URL + '?t=' + new Date().getTime(),
+          FALLBACK_CSV_URL + '?t=' + new Date().getTime(),
+          LOCAL_CSV_URL + '?t=' + new Date().getTime()
+        ];
+
+        for (const url of urlsToTry) {
+          try {
+            const res = await fetch(url);
+            if (res.ok) {
+              response = res;
+              break;
+            }
+          } catch (e) {
+            console.warn("No se pudo obtener CSV desde " + url, e);
+          }
+        }
+
+        if (!response || !response.ok) {
+          throw new Error("No se pudo cargar el archivo CSV de datos.");
+        }
+
+        const text = await response.text();
+        const rawRows = parseCSV(text);
+        if (!rawRows || rawRows.length === 0) {
+          throw new Error("El archivo CSV no contiene datos.");
+        }
+
+        // Normalizamos registros
+        datosEstacion = rawRows.map(r => {
+          const fechaHora = r['Fecha / Hora'] || '';
+          const parts = fechaHora.split(' ');
+          const dateStr = parts[0] || '';
+          const timeFull = parts[1] || '';
+          const timeShort = timeFull ? timeFull.substring(0, 5) : '';
+
+          return {
+            dateStr,
+            timeStr: timeShort,
+            dateTime: fechaHora,
+            temp: getVal(r, 'Temperatura del aire HC') || getVal(r, 'Temperatura'),
+            tempMax: getVal(r, 'Temperatura del aire HC [°C] - máx'),
+            tempMin: getVal(r, 'Temperatura del aire HC [°C] - mín'),
+            hum: getVal(r, 'Humedad relativa HC') || getVal(r, 'Humedad'),
+            humMax: getVal(r, 'Humedad relativa HC [%] - máx'),
+            humMin: getVal(r, 'Humedad relativa HC [%] - mín'),
+            dew: getVal(r, 'Punto de Rocío'),
+            rain: getVal(r, 'Precipitaci') || 0,
+            solar: getVal(r, 'Radiaci'),
+            battery: getVal(r, 'Batería'),
+            panel: getVal(r, 'Panel solar'),
+            dpv: getVal(r, 'DPV'),
+            deltaT: getVal(r, 'DeltaT'),
+            et: getVal(r, 'ET0'),
+            windSpeed: getVal(r, 'Velocidad de viento [m/s] - promedio') || getVal(r, 'Velocidad de viento'),
+            windGust: getVal(r, 'Velocidad de viento [m/s] - máx')
+          };
+        });
+
+        actualizarTarjetas();
+        renderTodosLosGraficos();
+
+      } catch (err) {
+        console.error("Error al cargar datos:", err);
+        const lbl = document.getElementById('label-ultima-fecha');
+        if (lbl) lbl.innerText = "Error al conectar con los datos";
+      } finally {
+        if (icon) {
+          setTimeout(() => icon.classList.remove('animate-spin'), 600);
+        }
+      }
+    }
+
+    function cambiarRangoHoras(horas) {
+      rangoHorasActual = horas;
+      const btn24 = document.getElementById('btn-rango-24h');
+      const btn48 = document.getElementById('btn-rango-48h');
+      if (btn24 && btn48) {
+        if (horas === 24) {
+          btn24.className = 'px-2.5 py-1 rounded-lg bg-sky-500 text-white shadow-sm transition-all text-xs font-semibold';
+          btn48.className = 'px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800 transition-all text-xs font-semibold';
+        } else {
+          btn48.className = 'px-2.5 py-1 rounded-lg bg-sky-500 text-white shadow-sm transition-all text-xs font-semibold';
+          btn24.className = 'px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800 transition-all text-xs font-semibold';
+        }
+      }
+      renderTodosLosGraficos();
+    }
+
+    function getDatosFiltrados() {
+      if (!datosEstacion || datosEstacion.length === 0) return [];
+      const sliceCount = Math.min(rangoHorasActual, datosEstacion.length);
+      // Tomamos los últimos N registros y los invertimos para orden cronológico (izquierda a derecha)
+      return datosEstacion.slice(0, sliceCount).reverse();
+    }
+
+    function actualizarTarjetas() {
+      if (!datosEstacion || datosEstacion.length === 0) return;
+      const latest = datosEstacion[0]; // Registro más reciente
+
+      // Fecha y hora
+      const lblFecha = document.getElementById('label-ultima-fecha');
+      if (lblFecha && latest.dateTime) {
+        const parts = latest.dateTime.split(' ');
+        const d = parts[0].split('-');
+        const fechaFormateada = d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : parts[0];
+        lblFecha.innerText = `${fechaFormateada} - ${latest.timeStr} hs`;
+      }
+
+      // Muestras últimas 24hs para min/max
+      const ultimas24 = datosEstacion.slice(0, Math.min(24, datosEstacion.length));
+
+      // Temperatura
+      const cardTemp = document.getElementById('card-temp-actual');
+      if (cardTemp && latest.temp !== null) {
+        cardTemp.innerHTML = `${latest.temp.toFixed(1)}<span>°C</span>`;
+      }
+
+      const temps24 = ultimas24.filter(r => r.temp !== null);
+      if (temps24.length > 0) {
+        let minT = temps24[0], maxT = temps24[0];
+        temps24.forEach(r => {
+          if (r.temp < minT.temp) minT = r;
+          if (r.temp > maxT.temp) maxT = r;
+        });
+        const elMin = document.getElementById('table-temp-min');
+        const elMax = document.getElementById('table-temp-max');
+        const elMinTime = document.getElementById('table-temp-min-time');
+        const elMaxTime = document.getElementById('table-temp-max-time');
+        if (elMin) elMin.innerText = `${minT.temp.toFixed(1)}°C`;
+        if (elMax) elMax.innerText = `${maxT.temp.toFixed(1)}°C`;
+        if (elMinTime) elMinTime.innerText = minT.timeStr;
+        if (elMaxTime) elMaxTime.innerText = maxT.timeStr;
+      }
+
+      // Humedad
+      const cardHum = document.getElementById('card-hum-actual');
+      if (cardHum && latest.hum !== null) {
+        cardHum.innerHTML = `${latest.hum.toFixed(0)}<span>%</span>`;
+      }
+
+      const hums24 = ultimas24.filter(r => r.hum !== null);
+      if (hums24.length > 0) {
+        let minH = hums24[0], maxH = hums24[0];
+        hums24.forEach(r => {
+          if (r.hum < minH.hum) minH = r;
+          if (r.hum > maxH.hum) maxH = r;
+        });
+        const elMinH = document.getElementById('table-hum-min');
+        const elMaxH = document.getElementById('table-hum-max');
+        const elMinHTime = document.getElementById('table-hum-min-time');
+        const elMaxHTime = document.getElementById('table-hum-max-time');
+        if (elMinH) elMinH.innerText = `${minH.hum.toFixed(0)}%`;
+        if (elMaxH) elMaxH.innerText = `${maxH.hum.toFixed(0)}%`;
+        if (elMinHTime) elMinHTime.innerText = minH.timeStr;
+        if (elMaxHTime) elMaxHTime.innerText = maxH.timeStr;
+      }
+
+      // Punto de Rocío
+      const cardDew = document.getElementById('card-dew-val');
+      if (cardDew && latest.dew !== null) {
+        cardDew.innerHTML = `${latest.dew.toFixed(1)}<span>°C</span>`;
+      }
+      const dews24 = ultimas24.filter(r => r.dew !== null);
+      if (dews24.length > 0) {
+        let minD = dews24[0], maxD = dews24[0];
+        dews24.forEach(r => {
+          if (r.dew < minD.dew) minD = r;
+          if (r.dew > maxD.dew) maxD = r;
+        });
+        const elMinD = document.getElementById('table-dew-min');
+        const elMaxD = document.getElementById('table-dew-max');
+        const elMinDTime = document.getElementById('table-dew-min-time');
+        const elMaxDTime = document.getElementById('table-dew-max-time');
+        if (elMinD) elMinD.innerText = `${minD.dew.toFixed(1)}°C`;
+        if (elMaxD) elMaxD.innerText = `${maxD.dew.toFixed(1)}°C`;
+        if (elMinDTime) elMinDTime.innerText = minD.timeStr;
+        if (elMaxDTime) elMaxDTime.innerText = maxD.timeStr;
+      }
+
+      // Lluvia acumulada 24hs y 48hs
+      const rain24 = ultimas24.reduce((acc, r) => acc + (r.rain || 0), 0);
+      const rain48 = datosEstacion.slice(0, Math.min(48, datosEstacion.length)).reduce((acc, r) => acc + (r.rain || 0), 0);
+      const elRain24 = document.getElementById('card-rain-24h');
+      const elRain48 = document.getElementById('card-rain-48h');
+      if (elRain24) elRain24.innerText = `${rain24.toFixed(1)} mm`;
+      if (elRain48) elRain48.innerText = `${rain48.toFixed(1)} mm`;
+
+      // Radiación solar actual y máxima 24h
+      const cardSolar = document.getElementById('card-solar-actual');
+      if (cardSolar && latest.solar !== null) {
+        cardSolar.innerText = `${Math.round(latest.solar)} W/m²`;
+      }
+      const solars24 = ultimas24.map(r => r.solar).filter(v => v !== null);
+      const maxSolar = solars24.length > 0 ? Math.max(...solars24) : 0;
+      const cardSolarMax = document.getElementById('card-solar-max');
+      if (cardSolarMax) cardSolarMax.innerText = `${Math.round(maxSolar)} W/m²`;
+
+      // Viento (si aplica)
+      const cardWind = document.getElementById('card-wind-speed');
+      const cardWindMs = document.getElementById('card-wind-ms');
+      const cardWindGust = document.getElementById('card-wind-gust');
+      if (cardWind && latest.windSpeed !== null) {
+        const kmh = (latest.windSpeed * 3.6).toFixed(1);
+        cardWind.innerHTML = `${kmh} <span class="text-xs text-slate-400 font-normal">km/h</span>`;
+        if (cardWindMs) cardWindMs.innerText = `${latest.windSpeed.toFixed(1)} m/s`;
+      }
+      if (cardWindGust) {
+        const gusts = ultimas24.map(r => r.windGust || r.windSpeed).filter(v => v !== null);
+        const maxGust = gusts.length > 0 ? (Math.max(...gusts) * 3.6).toFixed(1) : '--';
+        cardWindGust.innerText = `${maxGust} km/h`;
+      }
+
+      // DPV (si aplica a Mollinedo)
+      const cardDpv = document.getElementById('card-dpv-val');
+      const cardDpvSub = document.getElementById('card-dpv-sub');
+      const cardDeltaT = document.getElementById('card-deltat-val');
+      if (cardDpv && latest.dpv !== null) {
+        cardDpv.innerHTML = `${latest.dpv.toFixed(2)} <span class="text-xs text-slate-400 font-normal">kPa</span>`;
+        if (cardDpvSub) cardDpvSub.innerText = `${latest.dpv.toFixed(2)} kPa`;
+      }
+      if (cardDeltaT && latest.deltaT !== null) {
+        cardDeltaT.innerText = `${latest.deltaT.toFixed(1)} °C`;
+      }
+    }
+
+    function renderTodosLosGraficos() {
+      const rows = getDatosFiltrados();
+      if (!rows || rows.length === 0) return;
+
+      renderChartTemp(rows);
+      renderChartHum(rows);
+      renderChartDew(rows);
+      renderChartLluvia(rows);
+      renderChartSolar(rows);
+      renderChartDpv(rows);
+      feather.replace();
+    }
+
+    function renderChartTemp(rows) {
+      const ctx = document.getElementById('chartTemp');
+      if (!ctx) return;
+      const { textColor, gridColor } = getChartColors();
+      const labels = rows.map(r => r.timeStr);
+      const temps = rows.map(r => r.temp);
+      const dews = rows.map(r => r.dew);
+
+      const lastTemp = temps.filter(v => v !== null).pop();
+      const badge = document.getElementById('badge-temp-val');
+      if (badge && lastTemp !== undefined) badge.innerText = `${lastTemp.toFixed(1)} °C`;
+
+      if (chartTemp) chartTemp.destroy();
+      chartTemp = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Temp (°C)',
+              data: temps,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              fill: true,
+              tension: 0.3,
+              borderWidth: 2,
+              pointRadius: rows.length > 30 ? 1 : 2.5
+            },
+            {
+              label: 'Pto. Rocío (°C)',
+              data: dews,
+              borderColor: '#06b6d4',
+              backgroundColor: 'transparent',
+              borderWidth: 1.5,
+              borderDash: [3, 3],
+              tension: 0.3,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { labels: { color: textColor, font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: textColor, font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: gridColor } },
+            y: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: gridColor } }
+          }
+        }
+      });
+    }
+
+    function renderChartHum(rows) {
+      const ctx = document.getElementById('chartHum');
+      if (!ctx) return;
+      const { textColor, gridColor } = getChartColors();
+      const labels = rows.map(r => r.timeStr);
+      const hums = rows.map(r => r.hum);
+
+      const lastHum = hums.filter(v => v !== null).pop();
+      const badge = document.getElementById('badge-hum-val');
+      if (badge && lastHum !== undefined) badge.innerText = `${lastHum.toFixed(0)} %`;
+
+      if (chartHum) chartHum.destroy();
+      chartHum = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Humedad (%)',
+            data: hums,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.12)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: rows.length > 30 ? 1 : 2.5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { labels: { color: textColor, font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: textColor, font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: gridColor } },
+            y: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: gridColor }, min: 0, max: 100 }
+          }
+        }
+      });
+    }
+
+    function renderChartLluvia(rows) {
+      const ctx = document.getElementById('chartLluvia');
+      if (!ctx) return;
+      const { textColor, gridColor } = getChartColors();
+      const labels = rows.map(r => r.timeStr);
+      const rains = rows.map(r => r.rain || 0);
+
+      const totalPeriodo = rains.reduce((a, b) => a + b, 0);
+      const badge = document.getElementById('badge-rain-val');
+      if (badge) badge.innerText = `${totalPeriodo.toFixed(1)} mm`;
+
+      if (chartLluvia) chartLluvia.destroy();
+      chartLluvia = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Lluvia Horaria (mm)',
+            data: rains,
+            backgroundColor: 'rgba(14, 165, 233, 0.8)',
+            borderColor: '#0284c7',
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: textColor, font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: textColor, font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: gridColor } },
+            y: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: gridColor }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function renderChartSolar(rows) {
+      const ctx = document.getElementById('chartSolar');
+      if (!ctx) return;
+      const { textColor, gridColor } = getChartColors();
+      const labels = rows.map(r => r.timeStr);
+      const solars = rows.map(r => r.solar);
+
+      const lastSolar = solars.filter(v => v !== null).pop();
+      const badge = document.getElementById('badge-solar-val');
+      if (badge && lastSolar !== undefined) badge.innerText = `${Math.round(lastSolar)} W/m²`;
+
+      if (chartSolar) chartSolar.destroy();
+      chartSolar = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Radiación (W/m²)',
+            data: solars,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: rows.length > 30 ? 1 : 2.5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: textColor, font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: textColor, font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: gridColor } },
+            y: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: gridColor }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    function renderChartDew(rows) {
+      const ctx = document.getElementById('chartDew');
+      if (!ctx) return;
+      const { textColor, gridColor } = getChartColors();
+      const labels = rows.map(r => r.timeStr);
+      const dews = rows.map(r => r.dew);
+
+      const lastDew = dews.filter(v => v !== null).pop();
+      const badge = document.getElementById('badge-dew-val');
+      if (badge && lastDew !== undefined) {
+        badge.innerText = `${lastDew.toFixed(1)} °C`;
+      }
+
+      if (chartDew) chartDew.destroy();
+      chartDew = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Punto de Rocío (°C)',
+            data: dews,
+            borderColor: '#06b6d4',
+            backgroundColor: 'rgba(6, 182, 212, 0.12)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: rows.length > 30 ? 1 : 2.5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: textColor, font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: textColor, font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: gridColor } },
+            y: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: gridColor } }
+          }
+        }
+      });
+    }
+
+    function renderChartDpv(rows) {
+      const ctx = document.getElementById('chartDpv');
+      if (!ctx) return;
+      const { textColor, gridColor } = getChartColors();
+      const labels = rows.map(r => r.timeStr);
+      const dpvs = rows.map(r => r.dpv);
+
+      const lastDpv = dpvs.filter(v => v !== null).pop();
+      const badge = document.getElementById('badge-dpv-val');
+      if (badge && lastDpv !== undefined) badge.innerText = `${lastDpv.toFixed(2)} kPa`;
+
+      if (chartDpv) chartDpv.destroy();
+      chartDpv = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'DPV (kPa)',
+            data: dpvs,
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.12)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: rows.length > 30 ? 1 : 2.5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: textColor, font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: textColor, font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: gridColor } },
+            y: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: gridColor }, beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      cargarDatosEstacion();
+    });
+  </script>
+</body>
+</html>
